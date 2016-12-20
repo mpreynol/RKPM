@@ -24,16 +24,16 @@ order=1;
 xsample=0:0.1:10;
 N=zeros(length(xsample),1);
 h=1*2; % Dilation Parameter
-for t=1:length(xsample)
-    x=xsample(t);
+% for t=1:length(xsample)
+    x=8;
     % Moment Matrix:s
     M=zeros(order+1);
     for i=1:length(xI)
-        Mi=H(xI(i),x,order)*H(xI(i),x,order)'*weight(xI(i),x,h);
+        Mi=H(xI(i),x,order)*H(xI(i),x,order)'*weight(xI(i),x,h)
         M=M+Mi;
     end
     N(t)=H(x,x,order)'*inv(M)*H(XI,x,order)*weight(XI,x,h);
-end
+% end
 plot(xsample,N,'.')
 %% For a Single Shape Function Derivative
 ShapeFunction=5;

@@ -1,5 +1,6 @@
-function w = weight( x,s,a )
+function [w,wx] = weight( x,s,a )
 z=abs(s-x)/a;
+
 if z>=1
     w=0;
 elseif z<1/2
