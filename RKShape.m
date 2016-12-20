@@ -101,7 +101,8 @@ classdef RKShape < handle
         % Define Derivative:
         function vDx=getValueDx(obj,x)
             if abs(x-obj.cordinates)<=obj.a
-                obj.setMomentdx(x)
+                obj.setMoment(x); % This isn't eff! Need to find a way to only process it once per "point"
+                obj.setMomentdx(x);
                 vDx=obj.H(x,x,obj.order)'*(obj.Minvdx*obj.H(obj.cordinates,x,obj.order)*Weight.w(obj.cordinates,x,obj.a)+...
                     obj.Minv*obj.Hdx(obj.cordinates,x,obj.order)*Weight.w(obj.cordinates,x,obj.a)+...
                     obj.Minv*obj.H(obj.cordinates,x,obj.order)*Weight.wx(obj.cordinates,x,obj.a));
