@@ -10,8 +10,8 @@ w=zeros(length(xsample),1);
 wdx=zeros(length(xsample),1);
 for i =1:length(xsample);
     x=xsample(i);
-    w(i)=weight(XI,x,h);
-    wdx(i)=weightdx(XI,x,h);
+    w(i)=Weight.w(XI,x,h);
+    wdx(i)=Weight.wx(XI,x,h);
 end
 plot(xsample,w,'o')
 hold on
@@ -77,9 +77,9 @@ for j=1:length(xsample)
     % Moment Matrix:
     M=zeros(order+1);
     for i=1:length(xI)
-        M=M+H(xI(i),x,order)*H(xI(i),x,order)'*weight(xI(i),x,h);
+        M=M+H(xI(i),x,order)*H(xI(i),x,order)'*Weight.w(xI(i),x,h);
     end
-    N(j)=H(x,x,order)'*inv(M)*H(XI,x,order)*weight(XI,x,h);
+    N(j)=H(x,x,order)'*inv(M)*H(XI,x,order)*Weight.w(XI,x,h);
 end
 plot(xsample,N)
 hold on
