@@ -4,12 +4,11 @@ classdef RKShape < handle
     % Written by Mathew Reynolds on Dec 19, 2016
     
     properties
-        nodeNumber; % Global Node Number for this Shape (Int)
-        xI; % Nodal coordinates for Model (List, Double)
         a; % Dilation Parameter (Double)
         cordinates=[]; % Cordinates (list, Double)
         order; % Order of polynomial basis used
-        n; % Number of Nodes in model
+        Cloud; % Cloud Data Handle
+        weight; % Weight Data Handle (from This Node)
         M; % Moment Matrix
         Minv; % Stored value of matrix Invese
         Mdx; % Moment Matrix Derivative.
@@ -17,48 +16,33 @@ classdef RKShape < handle
     end
     
     methods
-        % Basic Function Set Up:
-        function obj = RKShape(nodeNumber,xI,a,order)
-            obj.setNodeNumber(nodeNumber);
-            obj.setXI(xI);
-            obj.setCordinates();
-            obj.setDilation(a);
-            obj.setOrder(order);
-            obj.setN(xI);
-        end
-        function setNodeNumber(obj, nodeNumber)
-           obj.nodeNumber = nodeNumber;
-        end
-        function setXI(obj,xI)
-            obj.xI=xI;
-        end
-        function setCordinates(obj)
-            obj.cordinates = obj.xI(obj.nodeNumber);
-        end
-        function setDilation(obj, a)
+        % Constructor:
+        function obj = RKShape(cordinates,a,order,Cloud,weight)
+            obj.cordinates=cordinates;
             obj.a=a;
-        end
-        function setOrder(obj,order)
             obj.order=order;
+            obj.Cloud=Cloud;
+            obj.weight=weight;
         end
-        function setN(obj,xI)
-            obj.n=size(xI,2);
+        
+        function test(obj)
+           for i=1:5
+           end
         end
         
         
-        function H=H(obj,x,s,order)
-            %returns a column vector:
-            H=zeros(order+1,1);
-            for i=0:order
-                H(i+1)=(x-s)^i;
+        % Basis Vectors
+        function H=H(obj,x)
+            H=zeros(obj.order+1,1);
+            for i=0:obj.order
+                H(i+1)=(x-obj.cordinates)^i;
             end
         end
-        function H=Hdx(obj,x,s,order)
-            %returns a column vector:
-            H=zeros(order+1,1);
+        function H=Hdx(obj,x)
+            H=zeros(obj.order+1,1);
             H(1)=0;
-            for i=1:order
-                H(i+1)=(-1)^i*i*(x-s)^(i-1);
+            for i=1:obj.order
+                H(i+1)=(-1)^i*i*(x-obj.cordinates)^(i-1);
             end
         end
         
@@ -66,35 +50,52 @@ classdef RKShape < handle
         % Define Moment Matrix:
         function setMoment(obj,x)
             Mi=zeros(obj.order+1);
-            for i=1:(obj.n)
-                if (abs(obj.xI(i)-x)<=obj.a) % Only use Nodes from inside dilation of current evaluatioin point
-                    Mi=Mi+obj.H(obj.xI(i),x,obj.order)*obj.H(obj.xI(i),x,obj.order)'*Weight.w(obj.xI(i),x,obj.a);
+            for i=1:(obj.Cloud.numberOfNodes) % Loop through other Nodes in the Mesh
+                if abs(obj.Cloud.Nodes(i).cordinates-x)<obj.a % Only use Nodes from inside dilation of current evaluatioin point
+                    Mi=Mi+obj.Cloud.Nodes(i).sF.H(x)*obj.Cloud.Nodes(i).sF.H(x)'*obj.Cloud.Nodes(i).weight.w(x);
                 end
             end
             obj.M=Mi;
-            obj.Minv=inv(obj.M);
+            if sum(isnan(obj.M))>0
+                obj.M=zeros(obj.order+1);
+                obj.Minv=obj.M;
+            else
+               obj.Minv=inv(obj.M); 
+            end
+            
         end
+        
         % Define Value
         function v=getValue(obj,x)
             if abs(x-obj.cordinates)<=obj.a
-                obj.setMoment(x);
-                v=obj.H(x,x,obj.order)'*obj.Minv*obj.H(obj.cordinates,x,obj.order)*Weight.w(obj.cordinates,x,obj.a);
+                if (x==obj.cordinates && obj.weight.singular)
+                    v=1;
+                else
+                    obj.setMoment(x);
+                    v=obj.H(obj.cordinates)'*obj.Minv*obj.H(x)*obj.weight.w(x);
+                end
             else
                 v=0;
             end
         end
         
+        %% Not Finished Updating!:
         % Processing for Derivative:
         function setMomentdx(obj,x)
             Midx=zeros(obj.order+1);
-            for i=1:obj.n
-                if (abs(obj.xI(i)-x)<=obj.a) % Only use Nodes from inside dilation of current evaluatioin point
-                    Midx=Midx+obj.Hdx(obj.xI(i),x,obj.order)*obj.H(obj.xI(i),x,obj.order)'*Weight.w(obj.xI(i),x,obj.a)+ ...
-                        obj.H(obj.xI(i),x,obj.order)*obj.Hdx(obj.xI(i),x,obj.order)'*Weight.w(obj.xI(i),x,obj.a)+...
-                        obj.H(obj.xI(i),x,obj.order)*obj.H(obj.xI(i),x,obj.order)'*Weight.wx(obj.xI(i),x,obj.a);
+            for i=1:(obj.Cloud.numberOfNodes)
+                if abs(obj.Cloud.Nodes(i).cordinates-x)<obj.a % Only use Nodes from inside dilation of current evaluatioin point
+                    Midx=Midx+obj.Cloud.Nodes(i).sF.Hdx(x)*obj.Cloud.Nodes(i).sF.H(x)'*obj.Cloud.Nodes(i).weight.w(x)+ ...
+                        obj.Cloud.Nodes(i).sF.H(x)*obj.Cloud.Nodes(i).sF.Hdx(x)'*obj.Cloud.Nodes(i).weight.w(x)+...
+                        obj.Cloud.Nodes(i).sF.H(x)*obj.Cloud.Nodes(i).sF.H(x)'*obj.Cloud.Nodes(i).weight.wx(x);
                 end
             end
+            
             obj.Mdx=Midx;
+            
+              if sum(isnan(obj.Mdx))>0
+                  obj.Mdx;
+              end
             obj.Minvdx=-obj.Minv*obj.Mdx*obj.Minv;
         end
         
@@ -103,14 +104,13 @@ classdef RKShape < handle
             if abs(x-obj.cordinates)<=obj.a
                 obj.setMoment(x); % This isn't eff! Need to find a way to only process it once per "point"
                 obj.setMomentdx(x);
-                vDx=obj.H(x,x,obj.order)'*(obj.Minvdx*obj.H(obj.cordinates,x,obj.order)*Weight.w(obj.cordinates,x,obj.a)+...
-                    obj.Minv*obj.Hdx(obj.cordinates,x,obj.order)*Weight.w(obj.cordinates,x,obj.a)+...
-                    obj.Minv*obj.H(obj.cordinates,x,obj.order)*Weight.wx(obj.cordinates,x,obj.a));
+                vDx=obj.H(obj.cordinates)'*(obj.Minvdx*obj.H(x)*obj.weight.w(x)+...
+                    obj.Minv*obj.Hdx(x)*obj.weight.w(x)+...
+                    obj.Minv*obj.H(x)*obj.weight.wx(x));
             else
                 vDx=0;
             end
         end
-        
         
     end
     

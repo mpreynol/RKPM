@@ -2,20 +2,21 @@
 xI=0:1:10;
 
 %% Plot the Weight Functions
-xsample=0:0.1:10;
+xsample=0:0.01:10;
 ShapeFunction=5;
 XI=xI(ShapeFunction);
 h=2;
 w=zeros(length(xsample),1);
 wdx=zeros(length(xsample),1);
+W=Weight(XI,h,true);
 for i =1:length(xsample);
     x=xsample(i);
-    w(i)=Weight.w(XI,x,h);
-    wdx(i)=Weight.wx(XI,x,h);
+    w(i)=W.w(x);
+    wdx(i)=W.wx(x);
 end
-plot(xsample,w,'o')
+plot(xsample,w,'.')
 hold on
-plot(xsample,wdx,'o')
+plot(xsample,wdx,'.')
 
 %% For a Single Shape Function:
 ShapeFunction=5;

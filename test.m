@@ -2,7 +2,7 @@
 
 x=0:0.01:pi/2;
 xI=0:pi/2/5:pi/2;
-RK=RKShape(6,xI,pi/2/5*2,1);
+RK=RKShape(4,xI,pi/2/5*2,1);
 r=zeros(1,length(x));
 dr=zeros(1,length(x));
 for i=1:length(x)
